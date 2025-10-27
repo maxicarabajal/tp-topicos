@@ -1,0 +1,13 @@
+# depslib dependency file v1.0
+1761597943 source:c:\users\maxim\desktop\tp-topicos\estructuras-de-datos-impl.c
+	"estructuras-de-datos.h"
+
+1761597561 c:\users\maxim\desktop\tp-topicos\estructuras-de-datos.h
+	<stdio.h>
+	"string.h"
+	<stdlib.h>
+
+1761596002 source:c:\users\maxim\desktop\tp-topicos\main.c
+	<stdio.h>
+	<string.h>
+
