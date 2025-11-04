@@ -267,7 +267,7 @@ resolverEcuacion((pv + (nEcu-1))->texto ,longitud);
  * Devuelve 1 (verdadero) si es valida, 0 (falso) si no.
  */
 int esEcuacionValida(char *ecuacion) {
-    const char *permitidos = "0123456789xy+-*/^()r \t";
+    const char *permitidos = "0123456789.xy+-*/^()r \t";
     char *p_ecu = ecuacion; // Puntero para iterar la ecuacion
 
     char *digitos = "0123456789";
@@ -424,7 +424,7 @@ void mostrarAyuda(void) {
 
     printf("1. CARACTERES PERMITIDOS:\n");
     printf("   > Variables: x, y\n");
-    printf("   > Numeros: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9\n");
+    printf("     > Numeros: 0-9 y . (punto decimal, ej: 3.14)\n");
     printf("   > Operadores: +, -, *, /\n");
     printf("   > Simbolos: ^ (potencia), r (raiz), (, )\n");
     printf("   > (Cualquier otro caracter como 'h', 'z', '!', etc. dara error)\n\n");

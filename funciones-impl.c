@@ -62,7 +62,7 @@ float resolverEcuacion(char *ecuacion, size_t longitud){
     printf("X\t|\tY\t|\tRESULTADO\n");
 for(int i=0; i<11; i++){
     // Usamos los punteros base
-    printf("%2.f\t|\t%2.f\t|\t%2.f\n", (vecVar+i)->valorX, (vecVar+i)->valorY, *(resultados+i));
+    printf("%2.f\t|\t%2.f\t|\t%.2f\n", (vecVar+i)->valorX, (vecVar+i)->valorY, *(resultados+i));
 }
 
 
@@ -71,9 +71,9 @@ for(int i=0; i<11; i++){
         pedirValoresVariables(&vars); //ya tiene la info de que variables pedir
         TokenList tokenList = tokenizarString(ecuacion,longitud, MAXTAM, &vars);
         asignarValoresVariables(&tokenList, &vars);
-        float resultado = shuntingYard(&tokenList, &vars);
+        resultado = shuntingYard(&tokenList, &vars);
 
-        printf("Resultado: %2.f\n", resultado);
+        printf("Resultado: %.2f\n", resultado);
     }
 
 return resultado;
@@ -262,165 +262,222 @@ int esAsociativoDerecha(const char *token) {
 
 TokenList tokenizarString(char *ecuacion, size_t longitud , int tamMax, Variables *vars) {
     TokenList tokenList; initTokenList(&tokenList, tamMax);
+
     for (int i = 0; i < longitud; i++) {
-            if (isspace(*(ecuacion + i))) continue;     // ignora espacios
+        if (isspace(*(ecuacion + i))) continue; // ignora espacios
 
-            char actual = *(ecuacion + i);
-            char siguiente = (i + 1 < longitud) ? *(ecuacion + i + 1) : '\0';
+        char actual = *(ecuacion + i);
+        char siguiente = (i + 1 < longitud) ? *(ecuacion + i + 1) : '\0';
 
-            // --- NUMERO ---
-            if (isdigit(actual)) {
-                int start = i;
-                while (i < longitud && isdigit(*(ecuacion + i))) i++;
 
-                int len = i - start;
-                char *numero = malloc(len + 1);
-                memcpy(numero, ecuacion + start, len);
-                numero[len] = '\0';
-                addTokenList(&tokenList, numero, 1);
-                char next = (i < longitud) ? *(ecuacion + i) : '\0';
+        // ==================================================================
+        // --- MODIFICACIÓN #1: LÓGICA DE NÚMEROS MEJORADA ---
+        // Esta lógica ahora se ejecuta ANTES de los operadores y maneja
+        // signos unarios (+/-), decimales y números enteros.
+        // ==================================================================
 
-                if (next == 'x' || next == 'y' || next == 'X' || next == 'Y' || next == '(') {
-                        addTokenList(&tokenList, "*", 0); } i--;
-                        continue;
-                }
+        // Primero, determinamos si el contexto es unario para un signo +/-
+        int esContextoUnario = 0;
+        if (i == 0) { // Inicio de la cadena
+            esContextoUnario = 1;
+        } else {
+            // Buscar el caracter anterior no espacial
+            int prev_idx = i - 1;
+            while (prev_idx >= 0 && isspace(*(ecuacion + prev_idx))) {
+                prev_idx--;
+            }
+            // Es unario si está al inicio o viene después de un operador / paréntesis
+            if (prev_idx < 0 || strchr("+-*/(^r", *(ecuacion + prev_idx))) {
+                esContextoUnario = 1;
+            }
+        }
 
-            // --- VARIABLE ---
-            if (actual == 'x' || actual == 'y' || actual == 'X' || actual == 'Y') {
-                addTokenList(&tokenList, charToString(actual), 1);
-                if (isdigit(siguiente) || siguiente == '(') {
-                    addTokenList(&tokenList, "*", 0);
-                }
-                continue;
+        // Un número puede empezar con:
+        // 1. Un dígito (e.g., "3")
+        // 2. Un punto decimal (e.g., ".5")
+        // 3. Un signo en contexto unario (e.g., "-3" o "+.5")
+        int esSignoUnarioValido = (actual == '+' || actual == '-') && esContextoUnario && (isdigit(siguiente) || siguiente == '.');
+
+        if (isdigit(actual) || (actual == '.' && isdigit(siguiente)) || esSignoUnarioValido) {
+
+            int start = i; // Marcamos el inicio del número (incluyendo el signo si es unario)
+
+            if (esSignoUnarioValido) {
+                i++; // Consumimos el signo, avanzamos al dígito o punto
             }
 
-            // --- PARENTESIS ---
-            if (actual == '(' || actual == ')') {
-                addTokenList(&tokenList, charToString(actual), 1);
-                if (actual == ')' && (siguiente == 'x' || siguiente == 'y' || siguiente == 'X' || siguiente == 'Y' || siguiente == '('|| isdigit(siguiente))) {
-                    addTokenList(&tokenList, "*", 0);
-                }
-                continue;
-            }
-
-            // --- RAIZ ---
-            if (actual == 'r' || actual == 'R') {
-
-                // si no hay un número antes, por defecto es raiz cuadrada
-                if (i == 0 || !isdigit(*(ecuacion + i - 1))) {
-                    addTokenList(&tokenList, "2", 0); // índice 2
-                }
-
-                // saltamos la 'r' y esperamos un '('
+            // Leer parte entera (si la hay)
+            while (i < longitud && isdigit(*(ecuacion + i))) {
                 i++;
-                if (*(ecuacion + i) != '(') {
-                    printf("Error: se esperaba '(' después de 'r'\n");
-                    exit(1);
-                }
-
-                // extraemos el contenido interno entre parentesis
-                int contParentesis = 1;
-                int start = i + 1; // después del '('
-                int j = start;
-
-                while (j < longitud && contParentesis > 0) {
-                    if (*(ecuacion + j) == '(') contParentesis++;
-                    else if (*(ecuacion + j) == ')') contParentesis--;
-                    j++;
-                }
-
-                if (contParentesis != 0) {
-                    printf("Error: paréntesis no balanceados en raíz.\n");
-                    exit(1);
-                }
-
-                int lenInterna = j - start - 1; // sin los parentesis para reservar la memoria exacta que va a usar
-                char *ecuacionInterna = malloc(lenInterna + 1);
-                if (!ecuacionInterna) {
-                    printf("Error al reservar memoria para ecuacionInterna.\n");
-                    exit(1);
-                }
-
-                memcpy(ecuacionInterna, ecuacion + start, lenInterna);
-                ecuacionInterna[lenInterna] = '\0';
-
-                // ahora evaluamos la subexpresión (breakpoint)
-                printf(" Subexpresion enviada a tokenizar: '%s'\n", ecuacionInterna);
-
-                TokenList tokenListInterna = tokenizarString(ecuacionInterna, lenInterna, 50, vars);
-
-                // breakpoint
-                printf("Ecuacion tokenizada: ");
-                char **ptr = tokenListInterna.items;
-                char **fin = tokenListInterna.items + tokenListInterna.size;
-                while (ptr < fin) {
-                    printf("%s ", *ptr);
-                    ptr++;
-                }
-                printf("\n");
-                //
-
-                //Asignamos valores a esta expresion Tokenizada internamente para que el shunting yard la resuelva correctamente
-                asignarValoresVariables(&tokenListInterna, vars);
-
-                float resultadoBase = shuntingYard(&tokenListInterna, vars);
-
-                // pasamos resultado a string
-                char *resultadoBaseStr = floatToString(resultadoBase);
-
-                addTokenList(&tokenList, resultadoBaseStr, 1); // base numérica
-                addTokenList(&tokenList, "r", 0);              // operador raíz
-
-                free(ecuacionInterna);
-                freeTokenList(&tokenListInterna);
-
-                // adelantamos índice al final del bloque procesado
-                i = j - 1;
-                continue;
             }
 
-
-            //Lo newww
-            char signoActual;
-            if(actual == '-' || actual == '+'){
-                signoActual = actual;
-                int j = i+1;
-                char posInterna = *(ecuacion+j); //Siguiente al actual
-                while(posInterna == '+' || posInterna == '-'){
-                    if(signoActual == '+' && posInterna == '+')       signoActual = '+';
-                    else if(signoActual == '+' && posInterna == '-')  signoActual = '-';
-                    else if(signoActual == '-' && posInterna == '+')  signoActual = '-';
-                    else if(signoActual == '-' && posInterna == '-')  signoActual = '+';
-                    j++;
-                    posInterna = *(ecuacion + j);
+            // Leer parte decimal (si la hay)
+            if (i < longitud && *(ecuacion + i) == '.') {
+                i++; // Consumir el '.'
+                // Leer dígitos después del decimal
+                while (i < longitud && isdigit(*(ecuacion + i))) {
+                    i++;
                 }
-
-                addTokenList(&tokenList, charToString(signoActual), 1);
-
-                i = j - 1;
-                continue; // no agregamos el actual otra vez
             }
 
+            // Creamos el token de número completo
+            int len = i - start;
+            char *numero = malloc(len + 1);
+            if (!numero) {
+                printf("Error de memoria al crear token de numero.\n");
+                exit(1);
+            }
+            memcpy(numero, ecuacion + start, len);
+            numero[len] = '\0';
 
-/*AQUI!!!*/
+            // Añadimos el token (e.g., "-3", "3.14", ".5", "+10")
+            addTokenList(&tokenList, numero, 1); // '1' para que addTokenList libere 'numero'
 
+            // Verificamos si hay multiplicación implícita después del número
+            char next = (i < longitud) ? *(ecuacion + i) : '\0';
+            if (next == 'x' || next == 'y' || next == 'X' || next == 'Y' || next == '(') {
+                addTokenList(&tokenList, "*", 0);
+            }
 
-            // --- OTROS (operadores, etc.) ---
+            i--; // El bucle for principal incrementará i, así que retrocedemos 1
+            continue;
+        }
+
+        // --- VARIABLE ---
+        if (actual == 'x' || actual == 'y' || actual == 'X' || actual == 'Y') {
             addTokenList(&tokenList, charToString(actual), 1);
-
+            if (isdigit(siguiente) || siguiente == '(') {
+                addTokenList(&tokenList, "*", 0);
+            }
+            continue;
         }
 
-        //breakpoint
-        printf("Ecuacion tokenizada:\n");
-        char **ptr = tokenList.items;
-        char **fin = tokenList.items + tokenList.size;
-        while (ptr < fin) {
-            printf("%s ", *ptr);
-            ptr++;
+        // --- PARENTESIS ---
+        if (actual == '(' || actual == ')') {
+            addTokenList(&tokenList, charToString(actual), 1);
+            if (actual == ')' && (siguiente == 'x' || siguiente == 'y' || siguiente == 'X' || siguiente == 'Y' || siguiente == '('|| isdigit(siguiente))) {
+                addTokenList(&tokenList, "*", 0);
+            }
+            continue;
         }
-        printf("\n");
 
-        return tokenList;
+        // --- RAIZ ---
+        if (actual == 'r' || actual == 'R') {
+            // (Tu lógica de raíz existente va aquí, no la modifico)
+            // si no hay un número antes, por defecto es raiz cuadrada
+            if (i == 0 || !isdigit(*(ecuacion + i - 1))) {
+                addTokenList(&tokenList, "2", 0); // índice 2
+            }
+
+            // saltamos la 'r' y esperamos un '('
+            i++;
+            if (*(ecuacion + i) != '(') {
+                printf("Error: se esperaba '(' después de 'r'\n");
+                exit(1);
+            }
+
+            // extraemos el contenido interno entre parentesis
+            int contParentesis = 1;
+            int start = i + 1; // después del '('
+            int j = start;
+
+            while (j < longitud && contParentesis > 0) {
+                if (*(ecuacion + j) == '(') contParentesis++;
+                else if (*(ecuacion + j) == ')') contParentesis--;
+                j++;
+            }
+
+            if (contParentesis != 0) {
+                printf("Error: paréntesis no balanceados en raíz.\n");
+                exit(1);
+            }
+
+            int lenInterna = j - start - 1; // sin los parentesis para reservar la memoria exacta que va a usar
+            char *ecuacionInterna = malloc(lenInterna + 1);
+            if (!ecuacionInterna) {
+                printf("Error al reservar memoria para ecuacionInterna.\n");
+                exit(1);
+            }
+
+            memcpy(ecuacionInterna, ecuacion + start, lenInterna);
+            ecuacionInterna[lenInterna] = '\0';
+
+            // ahora evaluamos la subexpresión (breakpoint)
+            printf(" Subexpresion enviada a tokenizar: '%s'\n", ecuacionInterna);
+            TokenList tokenListInterna = tokenizarString(ecuacionInterna, lenInterna, 50, vars);
+
+            // breakpoint
+            printf("Ecuacion tokenizada: ");
+            char **ptr = tokenListInterna.items;
+            char **fin = tokenListInterna.items + tokenListInterna.size;
+            while (ptr < fin) {
+                printf("%s ", *ptr);
+                ptr++;
+            }
+            printf("\n");
+            //
+
+            //Asignamos valores a esta expresion Tokenizada internamente para que el shunting yard la resuelva correctamente
+            asignarValoresVariables(&tokenListInterna, vars);
+
+            float resultadoBase = shuntingYard(&tokenListInterna, vars);
+
+            // pasamos resultado a string
+            char *resultadoBaseStr = floatToString(resultadoBase);
+
+            addTokenList(&tokenList, resultadoBaseStr, 1); // base numérica
+            addTokenList(&tokenList, "r", 0); // operador raíz
+
+            free(ecuacionInterna);
+            freeTokenList(&tokenListInterna);
+
+            // adelantamos índice al final del bloque procesado
+            i = j - 1;
+            continue;
+        }
+
+        // ==================================================================
+        // --- MODIFICACIÓN #2: LÓGICA DE SIGNOS "Lo newww" ---
+        // Esta lógica ahora solo se ejecutará para signos BINARIOS,
+        // ya que los unarios fueron capturados por la lógica de NÚMERO.
+        // ==================================================================
+        char signoActual;
+        if(actual == '-' || actual == '+'){
+            signoActual = actual;
+            int j = i+1;
+            char posInterna = *(ecuacion+j); //Siguiente al actual
+            while(posInterna == '+' || posInterna == '-'){
+                if(signoActual == '+' && posInterna == '+') signoActual = '+';
+                else if(signoActual == '+' && posInterna == '-') signoActual = '-';
+                else if(signoActual == '-' && posInterna == '+') signoActual = '-';
+                else if(signoActual == '-' && posInterna == '-') signoActual = '+';
+                j++;
+                posInterna = *(ecuacion + j);
+            }
+
+            addTokenList(&tokenList, charToString(signoActual), 1);
+
+            i = j - 1;
+            continue; // no agregamos el actual otra vez
+        }
+
+
+        // --- OTROS (operadores * / ^ etc.) ---
+        addTokenList(&tokenList, charToString(actual), 1);
+
+    } // Fin del bucle for
+
+    //breakpoint
+    printf("Ecuacion tokenizada:\n");
+    char **ptr = tokenList.items;
+    char **fin = tokenList.items + tokenList.size;
+    while (ptr < fin) {
+        printf("%s ", *ptr);
+        ptr++;
+    }
+    printf("\n");
+
+    return tokenList;
 }
 
 
