@@ -1,7 +1,7 @@
 #ifndef ESTRUCTURAS-DE-DATOS_H_INCLUDED
 #define ESTRUCTURAS-DE-DATOS_H_INCLUDED
 #include <stdio.h>
-#include "string.h"
+#include <string.h>
 #include <stdlib.h>
 #define MAXTAM 100
 

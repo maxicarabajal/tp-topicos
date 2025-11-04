@@ -1,5 +1,5 @@
 #include "funciones.h"
-
+#include "estructuras-de-datos.h"
 
 
 /*================================== FUNCION PARA RESOLVER ECUACION ======================================*/
@@ -7,13 +7,76 @@
 float resolverEcuacion(char *ecuacion, size_t longitud){
 
     Variables vars;
+    float resultado;
+    int opcion;
+    do{
+    printf("1: Ingresar solo un par de valores\n 2: Crear una tabla a partir de un par de valores\n");
+    scanf("%d", &opcion);
+    }while(opcion != 1 && opcion != 2);
+
+    if(opcion == 2){
+    float resultados[11];
+    float* presultados = resultados;
+    Variables vecVar[11];
+    Variables* pvec = vecVar;
+
     detectarVariables(ecuacion, longitud, &vars);
     pedirValoresVariables(&vars); //ya tiene la info de que variables pedir
+    *pvec = vars;
+
+    float i=0;
+    float j=1;
+    while(i<=5){
+        pvec->valorX = (vars.valorX)+i;
+        pvec->valorY = (vars.valorY)+i;
+        pvec++;
+        i++;
+    }
+    while(j<=5){
+        pvec->valorX = (vars.valorX)-j;
+        pvec->valorY = (vars.valorY)-j;
+        pvec++;
+        j++;
+    }
+
+    pvec=vecVar;
+
+    for(int i=0; i<11; i++){
+
+    vars.valorX = pvec->valorX;
+    vars.valorY = pvec->valorY;
+    printf("%2.f", vars.valorX);
+    printf("%2.f", vars.valorY);
+
     TokenList tokenList = tokenizarString(ecuacion,longitud, MAXTAM, &vars);
     asignarValoresVariables(&tokenList, &vars);
     float resultado = shuntingYard(&tokenList);
+    *presultados = resultado;
 
-    return resultado;
+    pvec++;
+    presultados++;
+    }
+
+    pvec=vecVar;
+    presultados=resultados;
+    printf("X\t|\tY\t|\tRESULTADO\n");
+for(int i=0; i<11; i++){
+    // Usamos los punteros base
+    printf("%2.f\t|\t%2.f\t|\t%2.f\n", (vecVar+i)->valorX, (vecVar+i)->valorY, *(resultados+i));
+}
+
+
+    }else{
+        detectarVariables(ecuacion, longitud, &vars);
+        pedirValoresVariables(&vars); //ya tiene la info de que variables pedir
+        TokenList tokenList = tokenizarString(ecuacion,longitud, MAXTAM, &vars);
+        asignarValoresVariables(&tokenList, &vars);
+        float resultado = shuntingYard(&tokenList);
+
+        printf("Resultado: %2.f\n", resultado);
+    }
+
+return resultado;
 }
 
 

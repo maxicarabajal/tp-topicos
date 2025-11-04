@@ -11,3 +11,24 @@
 	<stdio.h>
 	<string.h>
 
+1762220420 source:c:\users\matuc\desktop\ejercicios programacion\topicos de programacion\proy-topicos\funciones-impl.c
+	"funciones.h"
+	"estructuras-de-datos.h"
+
+1761959146 c:\users\matuc\desktop\ejercicios programacion\topicos de programacion\proy-topicos\funciones.h
+	"estructuras-de-datos.h"
+	<ctype.h>
+
+1761606964 c:\users\matuc\desktop\ejercicios programacion\topicos de programacion\proy-topicos\estructuras-de-datos.h
+	<stdio.h>
+	<string.h>
+	<stdlib.h>
+
+1762223301 source:c:\users\matuc\desktop\ejercicios programacion\topicos de programacion\proy-topicos\main.c
+	<stdio.h>
+	<string.h>
+	"funciones.h"
+
+1761601601 source:c:\users\matuc\desktop\ejercicios programacion\topicos de programacion\proy-topicos\estructuras-de-datos-impl.c
+	"estructuras-de-datos.h"
+
