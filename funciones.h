@@ -1,5 +1,5 @@
-#ifndef FUNCIONES_H_INCLUDED
-#define FUNCIONES_H_INCLUDED
+#ifndef RESOLUCION-ECUACION_H_INCLUDED
+#define RESOLUCION-ECUACION_H_INCLUDED
 #include "estructuras-de-datos.h"
 #include <ctype.h> // para isdigit
 
@@ -24,9 +24,10 @@ void detectarVariables(char *ecuacion, size_t longitud, Variables *vars);
 void pedirValoresVariables(Variables *vars);
 
 
-float shuntingYard(TokenList *t);
-int precedencia(char *token);
-int esAsociativoDerecha(char *token);
+float shuntingYard(TokenList *t, Variables *vars);
+int precedencia(const char *token);
+int esAsociativoDerecha(const char *token);
+int esNumeroToken(const char*token);
 
 
 //Proceso de Tokenizar
@@ -37,4 +38,4 @@ void freeTokenList(TokenList *t);
 char* charToString(char c);
 char* floatToString(float num);
 
-#endif // FUNCIONES_H_INCLUDED
+#endif // RESOLUCION-ECUACION_H_INCLUDED

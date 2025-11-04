@@ -50,7 +50,7 @@ float resolverEcuacion(char *ecuacion, size_t longitud){
 
     TokenList tokenList = tokenizarString(ecuacion,longitud, MAXTAM, &vars);
     asignarValoresVariables(&tokenList, &vars);
-    float resultado = shuntingYard(&tokenList);
+    float resultado = shuntingYard(&tokenList, &vars);
     *presultados = resultado;
 
     pvec++;
@@ -71,7 +71,7 @@ for(int i=0; i<11; i++){
         pedirValoresVariables(&vars); //ya tiene la info de que variables pedir
         TokenList tokenList = tokenizarString(ecuacion,longitud, MAXTAM, &vars);
         asignarValoresVariables(&tokenList, &vars);
-        float resultado = shuntingYard(&tokenList);
+        float resultado = shuntingYard(&tokenList, &vars);
 
         printf("Resultado: %2.f\n", resultado);
     }
@@ -129,7 +129,20 @@ void asignarValoresVariables(TokenList *t, Variables *vars) {
 
 
 //La ecuacion ya nos llega tokenizada
-float shuntingYard(TokenList *t){
+float shuntingYard(TokenList *t, Variables *vars ){
+
+    //breakpoint despues de reemplazar valores por variables
+        printf("Ecuacion tokenizada:\n");
+        char **ptr = t->items;
+        char **fin = t->items + t->size;
+        while (ptr < fin) {
+            printf("%s ", *ptr);
+            ptr++;
+        }
+        printf("\n");
+
+    char **punteroIndice = t->items;
+    char **memFinal = t->items + t->size;
 
     //Inicializamos la Cola y pila
     Stack pila;
@@ -137,8 +150,7 @@ float shuntingYard(TokenList *t){
     initStack(&pila, MAXTAM);
     initQueue(&salida, MAXTAM);
 
-    char **punteroIndice = t->items;
-    char **memFinal = t->items + t->size;
+
 
     //Empezamos a recorrer:
     while(punteroIndice < memFinal){
@@ -147,7 +159,7 @@ float shuntingYard(TokenList *t){
 
 
         // --- Operando (número) ---
-        if (isdigit(*token)) {
+        if (esNumeroToken(token)) {
             enqueue(&salida, token);
         }
         //Si es operador
@@ -204,7 +216,7 @@ float shuntingYard(TokenList *t){
 
     while(!isQueueEmpty(&salida)){
             char *token = dequeue(&salida);
-            if(isdigit(*token)){
+            if(esNumeroToken(token)){
                 float num = atof(token);
                 pushFloat(&pilaEcuacion, num);
             }else{
@@ -232,14 +244,16 @@ float shuntingYard(TokenList *t){
 
 
 
-int precedencia(char *token) {
+
+
+int precedencia(const char *token) {
     if (strcmp(token, "^") == 0 || strcmp(token, "r") == 0) return 3;
     if (strcmp(token, "*") == 0 || strcmp(token, "/") == 0) return 2;
     if (strcmp(token, "+") == 0 || strcmp(token, "-") == 0) return 1;
     return 0;
 }
 
-int esAsociativoDerecha(char *token) {
+int esAsociativoDerecha(const char *token) {
     return strcmp(token, "^") == 0; // solo potencia es derecha
 }
 
@@ -349,7 +363,7 @@ TokenList tokenizarString(char *ecuacion, size_t longitud , int tamMax, Variable
                 //Asignamos valores a esta expresion Tokenizada internamente para que el shunting yard la resuelva correctamente
                 asignarValoresVariables(&tokenListInterna, vars);
 
-                float resultadoBase = shuntingYard(&tokenListInterna);
+                float resultadoBase = shuntingYard(&tokenListInterna, vars);
 
                 // pasamos resultado a string
                 char *resultadoBaseStr = floatToString(resultadoBase);
@@ -364,6 +378,31 @@ TokenList tokenizarString(char *ecuacion, size_t longitud , int tamMax, Variable
                 i = j - 1;
                 continue;
             }
+
+
+            //Lo newww
+            char signoActual;
+            if(actual == '-' || actual == '+'){
+                signoActual = actual;
+                int j = i+1;
+                char posInterna = *(ecuacion+j); //Siguiente al actual
+                while(posInterna == '+' || posInterna == '-'){
+                    if(signoActual == '+' && posInterna == '+')       signoActual = '+';
+                    else if(signoActual == '+' && posInterna == '-')  signoActual = '-';
+                    else if(signoActual == '-' && posInterna == '+')  signoActual = '-';
+                    else if(signoActual == '-' && posInterna == '-')  signoActual = '+';
+                    j++;
+                    posInterna = *(ecuacion + j);
+                }
+
+                addTokenList(&tokenList, charToString(signoActual), 1);
+
+                i = j - 1;
+                continue; // no agregamos el actual otra vez
+            }
+
+
+/*AQUI!!!*/
 
 
             // --- OTROS (operadores, etc.) ---
@@ -382,6 +421,31 @@ TokenList tokenizarString(char *ecuacion, size_t longitud , int tamMax, Variable
         printf("\n");
 
         return tokenList;
+}
+
+
+int esNumeroToken(const char*token){
+    if(!token || *token == "\0" ) return 0;
+
+    const char *p = token;
+
+    // signo opcional
+    if (*p == '+' || *p == '-') p++;
+
+    int digits = 0;
+    while (*p && isdigit((unsigned char)*p)) { digits++; p++; }
+
+    // parte decimal opcional
+    if (*p == '.') {
+        p++;
+        while (*p && isdigit((unsigned char)*p)) { digits++; p++; }
+    }
+
+    // debe haber al menos un dígito en total
+    if (digits == 0) return 0;
+
+    // no debe quedar nada raro al final
+    return *p == '\0';
 }
 
 /*====================================== FUNCIONES TOKENLIST UTILS  ========================*/

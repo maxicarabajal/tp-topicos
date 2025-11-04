@@ -293,52 +293,74 @@ int esEcuacionValida(char *ecuacion) {
             return 0; // Falso
         }
 
-        // --- Validacion Sintactica (Paso B: Parentesis) ---
-        if (actual == '(') {
-            // Esta regla asegura que '(' solo venga despues de 'r' o '^'
-            if (anterior != 'r' && anterior != '^') {
-                printf("Error sintactico: El parentesis '(' solo se permite despues de 'r' (raiz) o '^' (potencia).\n");
-                return 0;
-            }
-            balanceParentesis++;
-        }
-        if (actual == ')') {
-            balanceParentesis--;
-        }
-        if (balanceParentesis < 0) {
-             printf("Error sintactico: Cierre de parentesis ')' inesperado.\n");
-             return 0;
-        }
+        if (actual == 'r' || actual == 'R') {
+            int fVar = 0;
+            int longitud = 0;
 
-        // --- Validacion Sintactica (Paso C: Errores especificos) ---
-
-        // 'r' y '^' DEBEN ir seguidos de '('
-        if (actual == 'r' || actual == '^') {
-            if (siguiente != '(') {
-                printf("Error sintactico: El caracter '%c' debe ir seguido de parentesis. Ej: %c( ... ).\n", actual, actual);
-                return 0;
-            }
-        }
-
-        // --- Validacion Sintactica (Paso D: /0, 0r, etc.) ---
-        if (siguiente != '\0') {
-
-            // REGLA: Bloquear "0r"
-            if (actual == '0' && siguiente == 'r') {
-                printf("Error sintactico: No se permite la raiz de indice '0' (0r).\n");
+            if (*(p_ecu + 1) != '(') {
+                printf("Error sintactico: 'r' debe ir seguido de '('.\n");
                 return 0;
             }
 
-            // REGLA: Bloquear "/0"
-            if (actual == '/' && siguiente == '0') {
-                char siguiente_del_cero = *(p_ecu + 2);
-                if (siguiente_del_cero == '\0' || strchr(digitos, siguiente_del_cero) == NULL) {
-                    printf("Error sintactico: Division literal por cero ('/0').\n");
+            // Primer caracter dentro de los parentesis
+            char *inicioInterno = p_ecu + 2;
+            char *q = inicioInterno;
+
+            // Buscar el cierre ')'
+            while (*q != '\0' && *q != ')') {
+                longitud++;
+                q++;
+            }
+
+            if (*q == '\0') {
+                printf("Error: Falta cierre de parentesis en la raiz.\n");
+                return 0;
+            }
+
+            char *ecuacionInterna = malloc((longitud + 1) * sizeof(char));
+            if (!ecuacionInterna) {
+                printf("Error no se pudo reservar memoria.\n");
+                exit(1);
+            }
+
+            int indiceRaiz = 2;
+            if (p_ecu > ecuacion && isdigit(*(p_ecu - 1))) {
+                if (p_ecu - ecuacion > 1 && isdigit(*(p_ecu - 2))) {
+                    printf("Error, Solo se permiten indices de raiz menores a 10.\n");
+                    free(ecuacionInterna);
+                    return 0;
+                }
+                indiceRaiz = *(p_ecu - 1) - '0';
+            }
+
+            char *punteroCopia  = ecuacionInterna;
+            char *lector = inicioInterno;
+            while (*lector != ')' && *lector != '\0') {
+                *punteroCopia  = *lector;
+                if (strchr(variables, *lector)) fVar = 1;
+                punteroCopia ++;
+                lector++;
+            }
+            *punteroCopia  = '\0';
+
+            printf("\nEcuacion interna: %s\n", ecuacionInterna);
+
+            // Mover el puntero principal al final de la raíz
+            p_ecu = q;
+
+            // Validación final (raíz par sin variables)
+            if (fVar == 0 && (indiceRaiz % 2 == 0)) {
+                Variables vars;
+                TokenList tokenList = tokenizarString(ecuacionInterna, longitud, MAXTAM, &vars);
+                float resultado = shuntingYard(&tokenList, &vars);
+                if (resultado < 0) {
+                    printf("Error, La raiz de indice par no puede tener un argumento negativo.\n");
+                    free(ecuacionInterna);
                     return 0;
                 }
             }
 
-
+            free(ecuacionInterna);
         }
 
         p_ecu++; // Avanzamos puntero de la ecuacion
