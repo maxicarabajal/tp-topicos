@@ -31,7 +31,7 @@ int esNumeroToken(const char*token);
 
 
 //Proceso de Tokenizar
-TokenList tokenizarString(char *ecuacion, size_t longitud , int tamMax, Variables *vars);
+TokenList tokenizarString(char *ecuacion, size_t longitud , int tamMax, Variables *vars, int *tieneError);
 void initTokenList(TokenList *t, int tamMax);
 void addTokenList(TokenList *t, const char *value, int debeLiberar);
 void freeTokenList(TokenList *t);

@@ -248,7 +248,6 @@ if(nEcu < 1 || nEcu > contadorEcuaciones){
 }
 
 }while(nEcu < 1 || nEcu > contadorEcuaciones);
-printf("Llego!!!!\n");
 
 tEcuacion* pv = vectorEcuaciones;
 size_t longitud = strcspn( ((pv + (nEcu-1)))->texto , "\n");
@@ -347,11 +346,12 @@ int esEcuacionValida(char *ecuacion) {
 
             // Mover el puntero principal al final de la raíz
             p_ecu = q;
+            int tieneError = 0;
 
             // Validación final (raíz par sin variables)
             if (fVar == 0 && (indiceRaiz % 2 == 0)) {
                 Variables vars;
-                TokenList tokenList = tokenizarString(ecuacionInterna, longitud, MAXTAM, &vars);
+                TokenList tokenList = tokenizarString(ecuacionInterna, longitud, MAXTAM, &vars, &tieneError);
                 float resultado = shuntingYard(&tokenList, &vars);
                 if (resultado < 0) {
                     printf("Error, La raiz de indice par no puede tener un argumento negativo.\n");

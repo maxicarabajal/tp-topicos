@@ -8,6 +8,7 @@ float resolverEcuacion(char *ecuacion, size_t longitud){
 
     Variables vars;
     float resultado;
+    int tieneError=0;
     int opcion;
     do{
     printf("1: Ingresar solo un par de valores\n 2: Crear una tabla a partir de un par de valores\n");
@@ -43,35 +44,62 @@ float resolverEcuacion(char *ecuacion, size_t longitud){
 
     for(int i=0; i<11; i++){
 
-    vars.valorX = pvec->valorX;
-    vars.valorY = pvec->valorY;
-    printf("%2.f", vars.valorX);
-    printf("%2.f", vars.valorY);
+        vars.valorX = pvec->valorX;
+        vars.valorY = pvec->valorY;
+        printf("%2.f", vars.valorX);
+        printf("%2.f", vars.valorY);
 
-    TokenList tokenList = tokenizarString(ecuacion,longitud, MAXTAM, &vars);
-    asignarValoresVariables(&tokenList, &vars);
-    float resultado = shuntingYard(&tokenList, &vars);
-    *presultados = resultado;
+        tieneError = 0;
+        TokenList tokenList = tokenizarString(ecuacion,longitud, MAXTAM, &vars, &tieneError);
 
-    pvec++;
-    presultados++;
+        if(tieneError==1){
+            printf("Error al evaluar en X=%.2f, Y=%.2f (operación invalida dentro de la raiz o ecuacion).\n",vars.valorX, vars.valorY);
+            *presultados = NAN; // Marcamos resultado no numerico
+            freeTokenList(&tokenList);
+        }
+        else{
+            asignarValoresVariables(&tokenList, &vars);
+            float resultado = shuntingYard(&tokenList, &vars);
+            *presultados = resultado;
+            freeTokenList(&tokenList);
+        }
+
+        pvec++;
+        presultados++;
     }
 
     pvec=vecVar;
     presultados=resultados;
     printf("X\t|\tY\t|\tRESULTADO\n");
-for(int i=0; i<11; i++){
-    // Usamos los punteros base
-    printf("%2.f\t|\t%2.f\t|\t%.2f\n", (vecVar+i)->valorX, (vecVar+i)->valorY, *(resultados+i));
-}
+    for(int i=0; i<11; i++){
+        if (isnan(*(resultados + i))) {
+            printf("%.2f\t|\t%.2f\t|\tERROR\n", (vecVar + i)->valorX, (vecVar + i)->valorY);
+        } else {
+            printf("%.2f\t|\t%.2f\t|\t%.2f\n",
+            (vecVar + i)->valorX, (vecVar + i)->valorY, *(resultados + i));
+        }
+    }
 
 
     }else{
         detectarVariables(ecuacion, longitud, &vars);
-        pedirValoresVariables(&vars); //ya tiene la info de que variables pedir
-        TokenList tokenList = tokenizarString(ecuacion,longitud, MAXTAM, &vars);
-        asignarValoresVariables(&tokenList, &vars);
-        resultado = shuntingYard(&tokenList, &vars);
+        do {
+            tieneError = 0;
+            pedirValoresVariables(&vars);
+            TokenList tokenList = tokenizarString(ecuacion, longitud, MAXTAM, &vars, &tieneError);
+
+            if (tieneError == 1) {
+                printf("Se detecto un error en la ecuacion. Revise los valores ingresados.\n");
+                freeTokenList(&tokenList);
+                printf("Ingrese nuevamente los valores de las variables:\n");
+                continue; // vuelve a intentar
+            }
+
+            asignarValoresVariables(&tokenList, &vars);
+            resultado = shuntingYard(&tokenList, &vars);
+            freeTokenList(&tokenList);
+
+        } while (tieneError != 0);
 
         printf("Resultado: %.2f\n", resultado);
     }
@@ -132,7 +160,7 @@ void asignarValoresVariables(TokenList *t, Variables *vars) {
 float shuntingYard(TokenList *t, Variables *vars ){
 
     //breakpoint despues de reemplazar valores por variables
-        printf("Ecuacion tokenizada:\n");
+        printf("Ecuacion tokenizada con variables: ");
         char **ptr = t->items;
         char **fin = t->items + t->size;
         while (ptr < fin) {
@@ -228,7 +256,18 @@ float shuntingYard(TokenList *t, Variables *vars ){
                 else if (strcmp(token, "*") == 0) resultado = a * b;
                 else if (strcmp(token, "/") == 0) resultado = a / b;
                 else if (strcmp(token, "^") == 0) resultado = pow(a, b);
-                else if (strcmp(token, "r") == 0) resultado = pow(b, 1.0 / a);
+                else if (strcmp(token, "r") == 0) {
+                    if ((int)a % 2 == 1 && b < 0) {
+                        // raiz impar de numero negativo -> se mantiene el signo
+                        resultado = -pow(-b, 1.0 / a);
+                    } else if (b < 0 && (int)a % 2 == 0) {
+                        // raiz par de numero negativo -> NaN o error
+                        printf("Error: raíz par de número negativo.\n");
+                        resultado = NAN;
+                    } else {
+                        resultado = pow(b, 1.0 / a);
+                        }
+                }
 
                 pushFloat(&pilaEcuacion, resultado);
             }
@@ -238,7 +277,6 @@ float shuntingYard(TokenList *t, Variables *vars ){
     free(pilaEcuacion.items);
     freeQueue(&salida);
     freeStack(&pila);
-    freeTokenList(t);
 
     return resultadoFinal;
 }
@@ -261,7 +299,7 @@ int esAsociativoDerecha(const char *token) {
 
 
 
-TokenList tokenizarString(char *ecuacion, size_t longitud , int tamMax, Variables *vars) {
+TokenList tokenizarString(char *ecuacion, size_t longitud , int tamMax, Variables *vars, int *tieneError) {
     TokenList tokenList; initTokenList(&tokenList, tamMax);
 
     for (int i = 0; i < longitud; i++) {
@@ -366,8 +404,19 @@ TokenList tokenizarString(char *ecuacion, size_t longitud , int tamMax, Variable
         if (actual == 'r' || actual == 'R') {
             // (Tu lógica de raíz existente va aquí, no la modifico)
             // si no hay un número antes, por defecto es raiz cuadrada
+
+            int indiceRaiz;
+
+            if (i != 0 && isdigit(*(ecuacion + i - 1))) {
+                indiceRaiz = (*(ecuacion + i - 1)) - '0'; // convertir char a número real
+            } else {
+                indiceRaiz = 2;
+            }
+
+            // si no hay un número antes, por defecto es raíz cuadrada
             if (i == 0 || !isdigit(*(ecuacion + i - 1))) {
                 addTokenList(&tokenList, "2", 0); // índice 2
+                indiceRaiz = 2;
             }
 
             // saltamos la 'r' y esperamos un '('
@@ -389,7 +438,7 @@ TokenList tokenizarString(char *ecuacion, size_t longitud , int tamMax, Variable
             }
 
             if (contParentesis != 0) {
-                printf("Error: paréntesis no balanceados en raíz.\n");
+                printf("Error: parentesis no balanceados en raiz.\n");
                 exit(1);
             }
 
@@ -405,23 +454,25 @@ TokenList tokenizarString(char *ecuacion, size_t longitud , int tamMax, Variable
 
             // ahora evaluamos la subexpresión (breakpoint)
             printf(" Subexpresion enviada a tokenizar: '%s'\n", ecuacionInterna);
-            TokenList tokenListInterna = tokenizarString(ecuacionInterna, lenInterna, 50, vars);
-
-            // breakpoint
-            printf("Ecuacion tokenizada: ");
-            char **ptr = tokenListInterna.items;
-            char **fin = tokenListInterna.items + tokenListInterna.size;
-            while (ptr < fin) {
-                printf("%s ", *ptr);
-                ptr++;
-            }
-            printf("\n");
-            //
+            TokenList tokenListInterna = tokenizarString(ecuacionInterna, lenInterna, 50, vars, tieneError);
 
             //Asignamos valores a esta expresion Tokenizada internamente para que el shunting yard la resuelva correctamente
             asignarValoresVariables(&tokenListInterna, vars);
 
             float resultadoBase = shuntingYard(&tokenListInterna, vars);
+
+            if (indiceRaiz % 2 == 0 && resultadoBase < 0) {
+                printf("Error: la operacion interna de la raiz es negativa.\n");
+                *tieneError = 1;
+                free(ecuacionInterna);
+                freeTokenList(&tokenListInterna);
+
+                // Limpiar la lista actual antes de salir
+                freeTokenList(&tokenList);
+                initTokenList(&tokenList, tamMax); // Dejarla vacía, pero válida
+
+                return tokenList;
+            }
 
             // pasamos resultado a string
             char *resultadoBaseStr = floatToString(resultadoBase);
@@ -469,7 +520,7 @@ TokenList tokenizarString(char *ecuacion, size_t longitud , int tamMax, Variable
     } // Fin del bucle for
 
     //breakpoint
-    printf("Ecuacion tokenizada:\n");
+    printf("Ecuacion tokenizada: ");
     char **ptr = tokenList.items;
     char **fin = tokenList.items + tokenList.size;
     while (ptr < fin) {

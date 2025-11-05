@@ -2,12 +2,13 @@
 1761597943 source:c:\users\maxim\desktop\tp-topicos\estructuras-de-datos-impl.c
 	"estructuras-de-datos.h"
 
-1762349105 c:\users\maxim\desktop\tp-topicos\estructuras-de-datos.h
+1762364565 c:\users\maxim\desktop\tp-topicos\estructuras-de-datos.h
 	<stdio.h>
 	<string.h>
 	<stdlib.h>
+	<math.h>
 
-1762355813 source:c:\users\maxim\desktop\tp-topicos\main.c
+1762367824 source:c:\users\maxim\desktop\tp-topicos\main.c
 	<stdio.h>
 	<string.h>
 	"funciones.h"
@@ -33,11 +34,11 @@
 1761601601 source:c:\users\matuc\desktop\ejercicios programacion\topicos de programacion\proy-topicos\estructuras-de-datos-impl.c
 	"estructuras-de-datos.h"
 
-1762349105 c:\users\maxim\desktop\tp-topicos\funciones.h
+1762362458 c:\users\maxim\desktop\tp-topicos\funciones.h
 	"estructuras-de-datos.h"
 	<ctype.h>
 
-1762352885 source:c:\users\maxim\desktop\tp-topicos\funciones-impl.c
+1762367298 source:c:\users\maxim\desktop\tp-topicos\funciones-impl.c
 	"funciones.h"
 	"estructuras-de-datos.h"
 
