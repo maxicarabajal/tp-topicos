@@ -238,6 +238,7 @@ float shuntingYard(TokenList *t, Variables *vars ){
     free(pilaEcuacion.items);
     freeQueue(&salida);
     freeStack(&pila);
+    freeTokenList(t);
 
     return resultadoFinal;
 }
@@ -437,7 +438,7 @@ TokenList tokenizarString(char *ecuacion, size_t longitud , int tamMax, Variable
         }
 
         // ==================================================================
-        // --- MODIFICACIÓN #2: LÓGICA DE SIGNOS "Lo newww" ---
+        // --- MODIFICACIÓN #2: LÓGICA DE SIGNOS ---
         // Esta lógica ahora solo se ejecutará para signos BINARIOS,
         // ya que los unarios fueron capturados por la lógica de NÚMERO.
         // ==================================================================

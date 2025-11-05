@@ -447,6 +447,7 @@ void mostrarAyuda(void) {
     printf("   > No se permite la division literal por cero (ej: '/0').\n");
     printf("   > No se permite la raiz de indice cero (ej: '0r(x)').\n");
     printf("   > Los parentesis '(' y ')' deben estar balanceados.\n");
+    printf("   > No se permite ingresar espacios entre los numeros (ej: '  4  x   - 2').\n");
 
     printf("\n--- Fin de la Ayuda ---\n");
 }
